@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ======= 配置 / Config =======
-BASE="https://raw.githubusercontent.com/LoranaAurelia/Lorana-s-Debian-sh/main"   # ← 改这里即可 / Change me only
+BASE="https://raw.githubusercontent.com/LoranaAurelia/Lorana-s-Debian-sh/main"
 SSH_SCRIPT="ssh.sh"
 SRC_SCRIPT="src.sh"
 CN_SCRIPT="cn.sh"
