@@ -11,10 +11,26 @@ else
   SUDO=""
 fi
 
-say(){ printf "%s\n" "$1 | $2"; }
+# ---------- 颜色 / Colors ----------
+cecho() { # $1=color $2...=msg
+  local c="${1:-}"; shift || true
+  case "$c" in
+    red)    printf "\033[31m%s\033[0m\n" "$*";;
+    green)  printf "\033[32m%s\033[0m\n" "$*";;
+    yellow) printf "\033[33m%s\033[0m\n" "$*";;
+    blue)   printf "\033[34m%s\033[0m\n" "$*";;
+    magenta)printf "\033[35m%s\033[0m\n" "$*";;
+    cyan)   printf "\033[36m%s\033[0m\n" "$*";;
+    *)      printf "%s\n" "$*";;
+  esac
+}
+hr(){ printf -- "\033[90m------------------------------------------------------------\033[0m\n"; }
+
+say(){ cecho cyan "$1 | $2"; }
+warn(){ cecho yellow "$1 | $2"; }
+err(){ cecho red "$1 | $2" >&2; }
 
 # 解析可选参数（非交互）/ Optional non-interactive args
-# 用法: --tencent / --aliyun / --official 或 -t/-a/-o
 CHOICE_ARG="${CHOICE:-}"  # 也支持 env: CHOICE=1/2/3
 while [ "${1:-}" ]; do
   case "$1" in
@@ -28,7 +44,7 @@ done
 # --- Detect OS / 识别系统 ---
 detect_os() {
   if [ ! -r /etc/os-release ]; then
-    say "[错误] 无法检测系统：缺少 /etc/os-release" "[Error] Cannot detect OS: /etc/os-release missing"
+    err "[错误] 无法检测系统：缺少 /etc/os-release" "[Error] Cannot detect OS: /etc/os-release missing"
     exit 1
   fi
   . /etc/os-release
@@ -48,7 +64,7 @@ detect_os() {
       fi
       case "$CODENAME" in
         bullseye|bookworm|trixie) DISTRO="debian" ;;
-        *) say "[错误] 未支持的 Debian 版本：$PRETTY_NAME" "[Error] Unsupported Debian version: $PRETTY_NAME"; exit 1 ;;
+        *) err "[错误] 未支持的 Debian 版本：$PRETTY_NAME" "[Error] Unsupported Debian version: $PRETTY_NAME"; exit 1 ;;
       esac
       ;;
     ubuntu)
@@ -60,11 +76,11 @@ detect_os() {
       fi
       case "$CODENAME" in
         jammy|noble) DISTRO="ubuntu" ;;
-        *) say "[错误] 未支持的 Ubuntu 版本：$PRETTY_NAME" "[Error] Unsupported Ubuntu version: $PRETTY_NAME"; exit 1 ;;
+        *) err "[错误] 未支持的 Ubuntu 版本：$PRETTY_NAME" "[Error] Unsupported Ubuntu version: $PRETTY_NAME"; exit 1 ;;
       esac
       ;;
     *)
-      say "[错误] 未支持的发行版：$PRETTY_NAME" "[Error] Unsupported distribution: $PRETTY_NAME"
+      err "[错误] 未支持的发行版：$PRETTY_NAME" "[Error] Unsupported distribution: $PRETTY_NAME"
       exit 1
       ;;
   esac
@@ -77,16 +93,15 @@ choose_mirror() {
   local choice="${CHOICE_ARG:-}"
 
   if [ -z "$choice" ]; then
-    echo "=============================="
-    echo "Debian/Ubuntu APT Mirror Switcher | APT 换源助手"
-    echo "=============================="
-    echo "1) Tencent Cloud (mirrors.cloud.tencent.com)"
-    echo "2) Aliyun        (mirrors.aliyun.com)"
-    echo "3) Official      (官方镜像 / official)"
-    echo "=============================="
+    hr
+    cecho green "Debian/Ubuntu APT Mirror Switcher | APT 换源助手"
+    hr
+    cecho yellow "1) Tencent Cloud (mirrors.cloud.tencent.com)"
+    cecho yellow "2) Aliyun        (mirrors.aliyun.com)"
+    cecho yellow "3) Official      (官方镜像 / official)"
+    hr
     if [ -r /dev/tty ]; then
-      # 关键：从 /dev/tty 读取，管道执行也能交互
-      printf "Please enter your choice [1-3]: " > /dev/tty
+      printf "\033[36mPlease enter your choice [1-3]: \033[0m" > /dev/tty
       IFS= read -r choice < /dev/tty || true
     fi
   fi
@@ -113,7 +128,6 @@ choose_mirror() {
       NAME="Aliyun | 阿里云"
       ;;
     3|"")
-      # 允许直接回车默认官方源 / Empty = default to official
       if [ "$DISTRO" = "debian" ]; then
         MIRROR="http://deb.debian.org/debian"
         SECURITY="http://security.debian.org/debian-security"
@@ -124,7 +138,7 @@ choose_mirror() {
       NAME="Official | 官方"
       ;;
     *)
-      say "[错误] 无效选择，已中止。" "[Error] Invalid choice. Aborting."
+      err "[错误] 无效选择，已中止。" "[Error] Invalid choice. Aborting."
       exit 1
       ;;
   esac
@@ -180,7 +194,7 @@ EOF
 apt_update() {
   say "[信息] 正在更新索引，请稍候…" "[Info] Updating package index..."
   $SUDO apt update
-  say "[完成] 已成功切换镜像并更新索引！" "[Done] Mirror switched and index updated successfully!"
+  cecho green "[完成] 已成功切换镜像并更新索引！ | [Done] Mirror switched and index updated successfully!"
 }
 
 main() {
