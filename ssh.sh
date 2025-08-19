@@ -1,10 +1,25 @@
 #!/usr/bin/env bash
-# Debian 12/13 SSH one-click setup (bilingual)
+# Debian 12/13 SSH one-click setup (bilingual, colored)
 set -euo pipefail
 
-say(){ printf "[Info] %s | %s\n" "$1" "$2"; }
-warn(){ printf "[Warning] %s | %s\n" "$1" "$2"; }
-err(){ printf "[Error] %s | %s\n" "$1" "$2" >&2; }
+# ---------- 颜色 / Colors ----------
+cecho() { # $1=color $2...=msg
+  local c="${1:-}"; shift || true
+  case "$c" in
+    red)    printf "\033[31m%s\033[0m\n" "$*";;
+    green)  printf "\033[32m%s\033[0m\n" "$*";;
+    yellow) printf "\033[33m%s\033[0m\n" "$*";;
+    blue)   printf "\033[34m%s\033[0m\n" "$*";;
+    magenta)printf "\033[35m%s\033[0m\n" "$*";;
+    cyan)   printf "\033[36m%s\033[0m\n" "$*";;
+    *)      printf "%s\n" "$*";;
+  esac
+}
+hr(){ printf -- "\033[90m------------------------------------------------------------\033[0m\n"; }
+
+say(){ cecho cyan "[Info] $1 | $2"; }
+warn(){ cecho yellow "[Warning] $1 | $2"; }
+err(){ cecho red "[Error] $1 | $2" >&2; }
 
 require_root(){ if [ "${EUID:-$(id -u)}" -ne 0 ]; then err "请以 root 运行。" "Run as root."; exit 1; fi; }
 
@@ -32,19 +47,19 @@ get_port(){
 
   if [ -z "${SSH_PORT:-}" ]; then
     if [ -r /dev/tty ]; then
-      printf "[Prompt] 请输入 SSH 端口（默认 %s）| Enter SSH port (default %s): " "$default_port" "$default_port" > /dev/tty
-      IFS= read -r SSH_PORT < /dev/tty || true   # 从 /dev/tty 读取，兼容 curl|bash
+      printf "\033[36m[Prompt] 请输入 SSH 端口（默认 %s）| Enter SSH port (default %s): \033[0m" "$default_port" "$default_port" > /dev/tty
+      IFS= read -r SSH_PORT < /dev/tty || true
     fi
   fi
   SSH_PORT="${SSH_PORT:-$default_port}"
 
   if ! [[ "$SSH_PORT" =~ ^[0-9]+$ ]] || [ "$SSH_PORT" -lt 1 ] || [ "$SSH_PORT" -gt 65535 ]; then
-    warn "端口无效，改用默认 %s。" "Invalid port, falling back to %s."
+    warn "端口无效，改用默认 $default_port。" "Invalid port, falling back to $default_port."
     SSH_PORT="$default_port"
   fi
 
   if ss -lnt 2>/dev/null | awk '{print $4}' | grep -qE "[:.]${SSH_PORT}\$"; then
-    warn "端口 %s 似乎在使用，仍将尝试。" "Port %s seems in use; proceeding."
+    warn "端口 $SSH_PORT 似乎在使用，仍将尝试。" "Port $SSH_PORT seems in use; proceeding."
   fi
   say "选定 SSH 端口：$SSH_PORT" "Selected SSH port: $SSH_PORT"
 }
@@ -83,9 +98,7 @@ open_firewall(){
   say "如用 nftables/iptables 请确认已放行该端口。" "If using nftables/iptables, ensure the port is allowed."
 }
 
-# ---- IP detection (updated) ----
 detect_ips(){
-  # 公网 / Public
   PUBLIC_IP=""
   if command -v curl >/dev/null 2>&1; then
     PUBLIC_IP="$(curl -fsS -4 https://ipinfo.io/ip || true)"
@@ -95,11 +108,8 @@ detect_ips(){
     [ -z "$PUBLIC_IP" ] && PUBLIC_IP="$(wget -qO- -6 https://ipinfo.io/ip || true)"
   fi
 
-  # 内网：列出所有非 lo 的 IPv4/IPv6 地址 / All non-loopback addresses (v4 & v6)
   PRIV_V4="$(ip -o -4 addr show scope global up 2>/dev/null | awk '!/ lo /{print $4}' | cut -d/ -f1 | xargs || true)"
   PRIV_V6="$(ip -o -6 addr show scope global up 2>/dev/null | awk '!/ lo /{print $4}' | cut -d/ -f1 | xargs || true)"
-
-  # 兜底（某些极简环境没有 ip 命令） / Fallback
   if [ -z "$PRIV_V4$PRIV_V6" ]; then
     PRIV_V4="$(hostname -I 2>/dev/null | xargs || true)"
   fi
@@ -107,37 +117,36 @@ detect_ips(){
 
 print_connection_info(){
   detect_ips
-  echo "------------------------------------------------------------"
-  echo "Connection Info / 连接信息"
-  echo "Port: ${SSH_PORT}"
-  echo "Private IPv4 / 内网 IPv4: ${PRIV_V4:-N/A}"
-  echo "Private IPv6 / 内网 IPv6: ${PRIV_V6:-N/A}"
-  echo "Public IP / 公网: ${PUBLIC_IP:-N/A}"
-  echo "Account / 账号: root"
+  hr
+  cecho green "Connection Info / 连接信息"
+  cecho blue "Port: ${SSH_PORT}"
+  cecho blue "Private IPv4 / 内网 IPv4: ${PRIV_V4:-N/A}"
+  cecho blue "Private IPv6 / 内网 IPv6: ${PRIV_V6:-N/A}"
+  cecho blue "Public IP / 公网: ${PUBLIC_IP:-N/A}"
+  cecho blue "Account / 账号: root"
   echo
-  echo "Built-in ssh (Linux/macOS/Windows) / 内置 ssh 命令："
+  cecho magenta "Built-in ssh (Linux/macOS/Windows) / 内置 ssh 命令："
   if [ -n "${PUBLIC_IP:-}" ]; then
-    echo "ssh root@${PUBLIC_IP} -p ${SSH_PORT}"
+    cecho cyan "ssh root@${PUBLIC_IP} -p ${SSH_PORT}"
   else
-    # 若没有公网 IP，则给出所有候选私网地址的示例 / show examples for all private addrs
     if [ -n "${PRIV_V4:-}" ]; then
-      for ip in $PRIV_V4; do echo "ssh root@${ip} -p ${SSH_PORT}"; done
+      for ip in $PRIV_V4; do cecho cyan "ssh root@${ip} -p ${SSH_PORT}"; done
     fi
     if [ -n "${PRIV_V6:-}" ]; then
-      for ip in $PRIV_V6; do echo "ssh root@[${ip}] -p ${SSH_PORT}"; done
+      for ip in $PRIV_V6; do cecho cyan "ssh root@[${ip}] -p ${SSH_PORT}"; done
     fi
-    [ -z "${PRIV_V4}${PRIV_V6}" ] && echo "ssh root@<IP-or-domain> -p ${SSH_PORT}"
+    [ -z "${PRIV_V4}${PRIV_V6}" ] && cecho cyan "ssh root@<IP-or-domain> -p ${SSH_PORT}"
   fi
   echo
-  echo "scp example / scp 示例:"
+  cecho magenta "scp example / scp 示例:"
   if [ -n "${PUBLIC_IP:-}" ]; then
-    echo "scp -P ${SSH_PORT} ./localfile root@${PUBLIC_IP}:/root/"
+    cecho cyan "scp -P ${SSH_PORT} ./localfile root@${PUBLIC_IP}:/root/"
   else
-    echo "scp -P ${SSH_PORT} ./localfile root@<IP-or-domain>:/root/"
+    cecho cyan "scp -P ${SSH_PORT} ./localfile root@<IP-or-domain>:/root/"
   fi
-  echo "Security: root+password enabled, use a strong password."
-  echo "安全：已启用 root+密码，请使用强密码。"
-  echo "------------------------------------------------------------"
+  cecho yellow "Security: root+password enabled, use a strong password."
+  cecho yellow "安全：已启用 root+密码，请使用强密码。"
+  hr
 }
 
 main(){
@@ -146,7 +155,6 @@ main(){
   check_debian
   ensure_packages
 
-  # 参数：--port/-p 指定端口；-y 使用默认 22（无需交互）
   PORT_ARG=""; ACCEPT_DEFAULT="0"
   while [ "${1:-}" ]; do
     case "$1" in
@@ -162,7 +170,6 @@ main(){
   open_firewall
   restart_ssh
 
-  # 确保最终一定输出连接信息 / Always print connection info at the end
   print_connection_info
 
   say "完成。如无法连接，请检查防火墙/云安全组。" "Done. If connection fails, check firewall/cloud SG."
