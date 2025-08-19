@@ -25,11 +25,19 @@
 ```
 apt install bash curl wget sudo
 ```
-门户脚本统一入口：
+然后执行门户脚本入口：
 ```
 sudo bash -c "$(curl -fsSL https://sdsh.cn.xuetao.host/p.sh)"
 ```
-或
+或者你也可以使用wget：
 ```
 sudo bash -c "$(wget -qO- https://sdsh.cn.xuetao.host/p.sh)"
+```
+上面的是中国访问优化的地址，如果你想直接在Github拉取：
+
+```
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/LoranaAurelia/Lorana-s-Debian-sh/main/p.sh)"
+```
+```
+sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/LoranaAurelia/Lorana-s-Debian-sh/main/p.sh)"
 ```
