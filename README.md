@@ -16,7 +16,6 @@
 
 * `bash`
 * `curl` 或 `wget` （二选一即可）
-* `sudo`（如非 root 用户调用）
 
 ---
 
