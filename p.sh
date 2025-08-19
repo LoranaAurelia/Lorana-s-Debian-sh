@@ -6,9 +6,30 @@ BASE="https://raw.githubusercontent.com/LoranaAurelia/Lorana-s-Debian-sh/main"
 SSH_SCRIPT="ssh.sh"
 SRC_SCRIPT="src.sh"
 CN_SCRIPT="cn.sh"
+SWAP_SCRIPT="swap.sh"
 # ============================
 
-say(){ printf "%s\n" "$1 | $2"; }
+# ---------- 颜色 / Colors ----------
+# 用法：cecho green "文本"
+cecho() { # $1=color $2...=msg
+  local c="${1:-}"; shift || true
+  case "$c" in
+    red)    printf "\033[31m%s\033[0m\n" "$*";;
+    green)  printf "\033[32m%s\033[0m\n" "$*";;
+    yellow) printf "\033[33m%s\033[0m\n" "$*";;
+    blue)   printf "\033[34m%s\033[0m\n" "$*";;
+    magenta)printf "\033[35m%s\033[0m\n" "$*";;
+    cyan)   printf "\033[36m%s\033[0m\n" "$*";;
+    *)      printf "%s\n" "$*";;
+  esac
+}
+hr(){ printf -- "\033[90m------------------------------------------------------------\033[0m\n"; }
+
+say(){ # 彩色双语提示
+  local zh="$1" en="$2"
+  cecho cyan "$zh"
+  cecho cyan "$en"
+}
 
 need_fetcher(){
   if command -v curl >/dev/null 2>&1; then
@@ -25,17 +46,23 @@ run_remote(){
   local path="$1"
   local url="${BASE%/}/$path"
   need_fetcher
-  say "[信息] 正在下载并执行：$url" "[Info] Fetching & running: $url"
+  hr
+  cecho blue "[信息] 正在下载并执行：$url"
+  cecho blue "[Info ] Fetching & running: $url"
+  hr
   # 用 bash 执行远端脚本 / execute remote with bash
   bash -c "$($FETCH "$url")"
 }
 
 menu(){
-  echo "=============================="
-  echo "1) SSH setup (ssh.sh) | 开启并配置 SSH"
-  echo "2) APT mirror (src.sh) | 更换软件源"
-  echo "3) Chinese support (cn.sh) | 中文显示支持"
-  echo "=============================="
+  hr
+  cecho green "== 一键门户 / One-Key Portal =="
+  hr
+  cecho yellow "1) SSH setup (${SSH_SCRIPT})        | 开启并配置 SSH"
+  cecho yellow "2) APT mirror (${SRC_SCRIPT})       | 更换软件源"
+  cecho yellow "3) Chinese support (${CN_SCRIPT})   | 中文显示支持"
+  cecho yellow "4) Swap & ZRAM (${SWAP_SCRIPT})     | 配置 Swap 与 ZRAM"
+  hr
 }
 
 # 选择：支持参数/环境变量/交互
@@ -44,7 +71,7 @@ CHOICE="${1:-${CHOICE:-}}"
 if [[ -z "${CHOICE}" ]]; then
   menu
   if [[ -r /dev/tty ]]; then
-    printf "Pick [1-3]: | 请输入数字 [1-3]： " > /dev/tty
+    printf "\033[36mPick [1-4]: | 请输入数字 [1-4]： \033[0m" > /dev/tty
     IFS= read -r CHOICE < /dev/tty || true
   fi
 fi
@@ -53,10 +80,13 @@ case "${CHOICE:-}" in
   1) run_remote "$SSH_SCRIPT" ;;
   2) run_remote "$SRC_SCRIPT" ;;
   3) run_remote "$CN_SCRIPT" ;;
-  *) 
-     say "[错误] 无效选择：${CHOICE:-<空>}（应为 1/2/3）。" "[Error] Invalid choice: ${CHOICE:-<empty>} (expected 1/2/3)."
+  4) run_remote "$SWAP_SCRIPT" ;;
+  *)
+     cecho red "[错误] 无效选择：${CHOICE:-<空>}（应为 1/2/3/4）。"
+     cecho red "[Error] Invalid choice: ${CHOICE:-<empty>} (expected 1/2/3/4)."
      menu
-     say "示例：curl -fsSL ${BASE%/}/p.sh | bash -s -- 1" "Example: curl -fsSL ${BASE%/}/p.sh | bash -s -- 1"
+     cecho magenta "示例：curl -fsSL ${BASE%/}/p.sh | bash -s -- 4    # 直接执行 Swap & ZRAM"
+     cecho magenta "Example: curl -fsSL ${BASE%/}/p.sh | bash -s -- 4  # run Swap & ZRAM directly"
      exit 1
      ;;
 esac
