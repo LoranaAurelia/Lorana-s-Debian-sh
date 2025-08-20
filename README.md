@@ -7,6 +7,7 @@
 * `ssh.sh`：一键开启并配置 SSH（支持 root 登录、端口自定义、防火墙放行等）
 * `src.sh`：APT 源更换助手（支持腾讯云、阿里云、官方）
 * `cn.sh`：中文显示修复器（locale、ncurses、screen/tmux/git 等）
+* `swap.sh`：自动配置 ZRAM 和 SWAP，简单模式提供了几个预设
 
 ---
 
