@@ -7,10 +7,10 @@ SSH_SCRIPT="ssh.sh"
 SRC_SCRIPT="src.sh"
 CN_SCRIPT="cn.sh"
 SWAP_SCRIPT="swap.sh"
+LOG_SCRIPT="log.sh"
 # ============================
 
 # ---------- 颜色 / Colors ----------
-# 用法：cecho green "文本"
 cecho() { # $1=color $2...=msg
   local c="${1:-}"; shift || true
   case "$c" in
@@ -50,7 +50,6 @@ run_remote(){
   cecho blue "[信息] 正在下载并执行：$url"
   cecho blue "[Info ] Fetching & running: $url"
   hr
-  # 用 bash 执行远端脚本 / execute remote with bash
   bash -c "$($FETCH "$url")"
 }
 
@@ -62,6 +61,7 @@ menu(){
   cecho yellow "2) APT mirror (${SRC_SCRIPT})       | 更换软件源"
   cecho yellow "3) Chinese support (${CN_SCRIPT})   | 中文显示支持"
   cecho yellow "4) Swap & ZRAM (${SWAP_SCRIPT})     | 配置 Swap 与 ZRAM"
+  cecho yellow "5) Log limit (${LOG_SCRIPT})        | 限制系统日志大小"
   hr
 }
 
@@ -71,7 +71,7 @@ CHOICE="${1:-${CHOICE:-}}"
 if [[ -z "${CHOICE}" ]]; then
   menu
   if [[ -r /dev/tty ]]; then
-    printf "\033[36mPick [1-4]: | 请输入数字 [1-4]： \033[0m" > /dev/tty
+    printf "\033[36mPick [1-5]: | 请输入数字 [1-5]： \033[0m" > /dev/tty
     IFS= read -r CHOICE < /dev/tty || true
   fi
 fi
@@ -81,12 +81,15 @@ case "${CHOICE:-}" in
   2) run_remote "$SRC_SCRIPT" ;;
   3) run_remote "$CN_SCRIPT" ;;
   4) run_remote "$SWAP_SCRIPT" ;;
+  5) run_remote "$LOG_SCRIPT" ;;
   *)
-     cecho red "[错误] 无效选择：${CHOICE:-<空>}（应为 1/2/3/4）。"
-     cecho red "[Error] Invalid choice: ${CHOICE:-<empty>} (expected 1/2/3/4)."
+     cecho red "[错误] 无效选择：${CHOICE:-<空>}（应为 1/2/3/4/5）。"
+     cecho red "[Error] Invalid choice: ${CHOICE:-<empty>} (expected 1/2/3/4/5)."
      menu
      cecho magenta "示例：curl -fsSL ${BASE%/}/p.sh | bash -s -- 4    # 直接执行 Swap & ZRAM"
+     cecho magenta "示例：curl -fsSL ${BASE%/}/p.sh | bash -s -- 5    # 直接执行 Log limit"
      cecho magenta "Example: curl -fsSL ${BASE%/}/p.sh | bash -s -- 4  # run Swap & ZRAM directly"
+     cecho magenta "Example: curl -fsSL ${BASE%/}/p.sh | bash -s -- 5  # run Log limit directly"
      exit 1
      ;;
 esac
